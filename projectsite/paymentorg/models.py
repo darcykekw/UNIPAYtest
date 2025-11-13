@@ -15,6 +15,34 @@ class BaseModel(models.Model):
         abstract = True
         ordering = ['-created_at']
 
+# ============================================
+# UNIFIED USER PROFILE EXTENSION
+# ============================================
+
+class UserProfile(BaseModel):
+    """
+    Unified profile extension for User model.
+    Provides Officer Status Flag for unified login system.
+    """
+    user = models.OneToOneField(
+        User,
+        on_delete=models.CASCADE,
+        related_name='user_profile',
+        verbose_name="User"
+    )
+    is_officer = models.BooleanField(
+        default=False,
+        verbose_name="Officer Status Flag",
+        help_text="Grants officer-exclusive abilities when enabled"
+    )
+    
+    class Meta:
+        verbose_name = "User Profile"
+        verbose_name_plural = "User Profiles"
+    
+    def __str__(self):
+        return f"{self.user.username} - {'Officer' if self.is_officer else 'Student'}"
+
 # USER PROFILE MODELS
 
 class College(BaseModel):
@@ -31,9 +59,30 @@ class College(BaseModel):
         return self.name
 
 class Course(BaseModel):
+    """
+    Academic programs/courses.
+    Supports the 5 specific programs: Medical Biology, Marine Biology, 
+    Computer Science, Environmental Science, Information Technology
+    """
+    PROGRAM_CHOICES = [
+        ('MEDICAL_BIOLOGY', 'Medical Biology'),
+        ('MARINE_BIOLOGY', 'Marine Biology'),
+        ('COMPUTER_SCIENCE', 'Computer Science'),
+        ('ENVIRONMENTAL_SCIENCE', 'Environmental Science'),
+        ('INFORMATION_TECHNOLOGY', 'Information Technology'),
+        ('OTHER', 'Other'),
+    ]
+    
     name = models.CharField(max_length=200, verbose_name="Course/Program Name")
     code = models.CharField(max_length=20, unique=True, blank=True, null=True, verbose_name="Code")
     college = models.ForeignKey(College, on_delete=models.CASCADE, related_name='courses', verbose_name="College/Department")
+    program_type = models.CharField(
+        max_length=50,
+        choices=PROGRAM_CHOICES,
+        default='OTHER',
+        verbose_name="Program Type",
+        help_text="Select the specific program type for fee calculation"
+    )
     description = models.TextField(blank=True, verbose_name="Description")
 
     class Meta:
@@ -44,6 +93,10 @@ class Course(BaseModel):
 
     def __str__(self):
         return f"{self.name} ({self.college.name})"
+    
+    def is_program_specific(self):
+        """Check if this course is one of the 5 specific programs"""
+        return self.program_type != 'OTHER'
 
 class Student(BaseModel):
     user = models.OneToOneField(
@@ -142,6 +195,116 @@ class Student(BaseModel):
     def get_completed_payments(self):
         """Get all completed payments for this student (excluding voided)"""
         return Payment.objects.filter(student=self, status='COMPLETED', is_void=False)
+    
+    def get_applicable_fees(self):
+        """
+        Get all applicable fees for this student based on two-tiered system:
+        Tier 1: Program Affiliation Fees (specific to student's program)
+        Tier 2: College-Based Organization Fees (mandatory for all)
+        """
+        from django.db.models import Q
+        
+        if not self.course:
+            return FeeType.objects.none()
+        
+        current_period = self._get_current_period()
+        if not current_period:
+            return FeeType.objects.none()
+        
+        # Tier 1: Program-specific fees (only for student's specific program)
+        tier1_fees = FeeType.objects.filter(
+            organization__fee_tier='TIER_1',
+            organization__program_affiliation=self.course.program_type,
+            is_active=True,
+            academic_year=current_period.academic_year,
+            semester=current_period.semester
+        ).filter(
+            Q(applicable_year_levels__icontains=str(self.year_level)) |
+            Q(applicable_year_levels__iexact='All')
+        )
+        
+        # Tier 2: College-wide mandatory fees (for all students)
+        tier2_fees = FeeType.objects.filter(
+            organization__fee_tier='TIER_2',
+            is_active=True,
+            academic_year=current_period.academic_year,
+            semester=current_period.semester
+        ).filter(
+            Q(applicable_year_levels__icontains=str(self.year_level)) |
+            Q(applicable_year_levels__iexact='All')
+        )
+        
+        # Combine both tiers
+        all_fees = (tier1_fees | tier2_fees).distinct()
+        
+        # Exclude already paid fees
+        paid_fee_ids = Payment.objects.filter(
+            student=self,
+            status='COMPLETED',
+            is_void=False
+        ).values_list('fee_type_id', flat=True)
+        
+        # Exclude pending payment requests
+        pending_fee_ids = PaymentRequest.objects.filter(
+            student=self,
+            status='PENDING'
+        ).values_list('fee_type_id', flat=True)
+        
+        return all_fees.exclude(id__in=list(paid_fee_ids) + list(pending_fee_ids))
+    
+    def get_total_outstanding_fees(self):
+        """Calculate total amount of outstanding fees"""
+        fees = self.get_applicable_fees()
+        return fees.aggregate(total=Sum('amount'))['total'] or Decimal('0.00')
+    
+    def get_tier1_fees(self):
+        """Get Tier 1 (Program-specific) fees"""
+        from django.db.models import Q
+        
+        if not self.course:
+            return FeeType.objects.none()
+        
+        current_period = self._get_current_period()
+        if not current_period:
+            return FeeType.objects.none()
+        
+        return FeeType.objects.filter(
+            organization__fee_tier='TIER_1',
+            organization__program_affiliation=self.course.program_type,
+            is_active=True,
+            academic_year=current_period.academic_year,
+            semester=current_period.semester
+        ).filter(
+            Q(applicable_year_levels__icontains=str(self.year_level)) |
+            Q(applicable_year_levels__iexact='All')
+        )
+    
+    def get_tier2_fees(self):
+        """Get Tier 2 (College-wide mandatory) fees"""
+        from django.db.models import Q
+        
+        current_period = self._get_current_period()
+        if not current_period:
+            return FeeType.objects.none()
+        
+        return FeeType.objects.filter(
+            organization__fee_tier='TIER_2',
+            is_active=True,
+            academic_year=current_period.academic_year,
+            semester=current_period.semester
+        ).filter(
+            Q(applicable_year_levels__icontains=str(self.year_level)) |
+            Q(applicable_year_levels__iexact='All')
+        )
+    
+    def _get_current_period(self):
+        """Helper method to get current academic period"""
+        try:
+            return AcademicYearConfig.objects.get(is_current=True)
+        except AcademicYearConfig.DoesNotExist:
+            return None
+        except AcademicYearConfig.MultipleObjectsReturned:
+            return AcademicYearConfig.objects.filter(is_current=True).order_by('-start_date').first()
 
 
 class Officer(BaseModel):
@@ -210,8 +373,25 @@ class Officer(BaseModel):
 
 class Organization(BaseModel):
     """
-    Student organizations that collect fees
+    Student organizations that collect fees.
+    Supports two-tiered fee system:
+    - TIER_1: Program Affiliation Fees (specific to academic programs)
+    - TIER_2: College-Based Organization Fees (mandatory for all students)
     """
+    FEE_TIER_CHOICES = [
+        ('TIER_1', 'Tier 1: Program Affiliation Fees'),
+        ('TIER_2', 'Tier 2: College-Based Organization Fees'),
+    ]
+    
+    PROGRAM_AFFILIATION_CHOICES = [
+        ('MEDICAL_BIOLOGY', 'Medical Biology'),
+        ('MARINE_BIOLOGY', 'Marine Biology'),
+        ('COMPUTER_SCIENCE', 'Computer Science'),
+        ('ENVIRONMENTAL_SCIENCE', 'Environmental Science'),
+        ('INFORMATION_TECHNOLOGY', 'Information Technology'),
+        ('ALL', 'All Programs'),
+    ]
+    
     name = models.CharField(
         max_length=200, 
         unique=True, 
@@ -221,12 +401,30 @@ class Organization(BaseModel):
         max_length=20,
         unique=True,
         verbose_name="Organization Code",
-        help_text="Short code (e.g., SPECTRUM, COS)"
+        help_text="Short code (e.g., CSG, COMPENDIUM, MBIO)"
     )
     department = models.CharField(
         max_length=100,
         verbose_name="Department/College",
         help_text="e.g., College of Sciences"
+    )
+    
+    # Two-Tiered Fee System
+    fee_tier = models.CharField(
+        max_length=10,
+        choices=FEE_TIER_CHOICES,
+        default='TIER_2',
+        verbose_name="Fee Tier",
+        help_text="Tier 1: Program-specific fees. Tier 2: College-wide mandatory fees."
+    )
+    program_affiliation = models.CharField(
+        max_length=50,
+        choices=PROGRAM_AFFILIATION_CHOICES,
+        blank=True,
+        null=True,
+        default='ALL',
+        verbose_name="Program Affiliation",
+        help_text="Required for Tier 1 fees. Select the specific program this organization serves."
     )
     
     description = models.TextField(
@@ -252,10 +450,21 @@ class Organization(BaseModel):
     class Meta:
         verbose_name = "Organization"
         verbose_name_plural = "Organizations"
-        ordering = ['name']
+        ordering = ['fee_tier', 'name']
 
     def __str__(self):
-        return f"{self.name} ({self.code})"
+        return f"{self.name} ({self.code}) - {self.get_fee_tier_display()}"
+    
+    def clean(self):
+        """Validate that Tier 1 organizations have program affiliation"""
+        from django.core.exceptions import ValidationError
+        if self.fee_tier == 'TIER_1' and not self.program_affiliation:
+            raise ValidationError({
+                'program_affiliation': 'Program affiliation is required for Tier 1 (Program-specific) organizations.'
+            })
+        if self.fee_tier == 'TIER_2' and self.program_affiliation and self.program_affiliation != 'ALL':
+            # Tier 2 should typically be for all programs, but allow flexibility
+            pass
 
     def get_active_fees_count(self):
         """Get count of active fee types"""

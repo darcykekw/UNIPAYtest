@@ -22,7 +22,7 @@ logger = logging.getLogger(__name__)
 from .models import (
     Student, Officer, Organization, FeeType,
     PaymentRequest, Payment, Receipt, ActivityLog, AcademicYearConfig,
-    Course, College
+    Course, College, UserProfile
 )
 from .forms import (
     StudentPaymentRequestForm, OfficerPaymentProcessForm, OrganizationForm, 
@@ -68,12 +68,29 @@ class CustomLoginView(LoginView):
     def get_success_url(self):
         user = self.request.user
         
-        if hasattr(user, 'student_profile'):
-            return reverse_lazy('student_dashboard')
+        # Unified login system: Check Officer Status Flag
+        is_officer = False
+        if hasattr(user, 'user_profile'):
+            is_officer = user.user_profile.is_officer
         elif hasattr(user, 'officer_profile'):
+            is_officer = True
+            # Sync UserProfile if it doesn't exist
+            if not hasattr(user, 'user_profile'):
+                UserProfile.objects.get_or_create(
+                    user=user,
+                    defaults={'is_officer': True}
+                )
+        
+        if is_officer or user.is_superuser:
             return reverse_lazy('officer_dashboard')
-        elif user.is_superuser:
-            return reverse_lazy('officer_dashboard') 
+        elif hasattr(user, 'student_profile'):
+            # Ensure UserProfile exists for students
+            if not hasattr(user, 'user_profile'):
+                UserProfile.objects.get_or_create(
+                    user=user,
+                    defaults={'is_officer': False}
+                )
+            return reverse_lazy('student_dashboard')
         elif user.is_staff:
             return '/admin/'
         else:
@@ -161,7 +178,13 @@ class StudentRequiredMixin(LoginRequiredMixin, UserPassesTestMixin):
 class OfficerRequiredMixin(LoginRequiredMixin, UserPassesTestMixin):
     def test_func(self):
         user = self.request.user
-        return hasattr(user, 'officer_profile') or user.is_superuser
+        # Unified login: Check Officer Status Flag
+        is_officer = False
+        if hasattr(user, 'user_profile'):
+            is_officer = user.user_profile.is_officer
+        elif hasattr(user, 'officer_profile'):
+            is_officer = True
+        return is_officer or user.is_superuser
     
     def handle_no_permission(self):
         messages.error(self.request, "Officer or Superuser privilege required.")
@@ -206,12 +229,22 @@ class StudentDashboardView(StudentRequiredMixin, TemplateView):
         total_paid = completed_payments.aggregate(Sum('amount'))['amount__sum'] or 0
         payments_count = completed_payments.count()
         
+        # Two-tiered fee system: Get applicable fees
+        applicable_fees = student.get_applicable_fees()
+        tier1_fees = student.get_tier1_fees()
+        tier2_fees = student.get_tier2_fees()
+        total_outstanding = student.get_total_outstanding_fees()
+        
         context.update({
             'student': student,
             'pending_payments': pending_payments,
             'completed_payments': completed_payments.order_by('-created_at')[:5],
             'total_paid': total_paid,
             'payments_count': payments_count,
+            'applicable_fees': applicable_fees,
+            'tier1_fees': tier1_fees,
+            'tier2_fees': tier2_fees,
+            'total_outstanding': total_outstanding,
         })
         return context
 
@@ -248,7 +281,9 @@ class GenerateQRPaymentView(StudentRequiredMixin, CreateView):
     
     def get_form_kwargs(self):
         kwargs = super().get_form_kwargs()
-        kwargs['student'] = self.request.user.student_profile
+        student = self.request.user.student_profile
+        kwargs['student'] = student
+        # Use two-tiered fee system: only show applicable fees
         return kwargs
     
     @transaction.atomic
