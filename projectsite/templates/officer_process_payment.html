@@ -1,0 +1,138 @@
+{% extends "base.html" %}
+
+{% block title %}Process Payment: {{ request.queue_number }}{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center py-5">
+    <div class="col-md-10">
+        <div class="card border-0 shadow-2xl fade-in" style="background: var(--bg-card); border: 1px solid rgba(255,255,255,0.1);">
+            <div class="card-header border-0 py-4" style="background: var(--gradient-warm);">
+                <h4 class="mb-0 fw-bold text-white"><i class="fas fa-cash-register me-2"></i>Process Payment for Queue #{{ request.queue_number }}</h4>
+            </div>
+            <div class="card-body p-4">
+                <div class="row">
+                    <div class="col-md-5 border-end pe-4" style="border-color: rgba(255,255,255,0.1) !important;">
+                        <h5 class="mb-3 text-white fw-bold"><i class="fas fa-user-graduate me-2" style="color: var(--accent-purple);"></i>Student & Request</h5>
+                        <table class="table table-sm table-borderless">
+                            <tr>
+                                <th class="text-white-50">Name:</th>
+                                <td class="fw-bold text-white">{{ student.get_full_name }}</td>
+                            </tr>
+                            <tr>
+                                <th class="text-white-50">Student ID:</th>
+                                <td class="text-white">{{ student.student_id_number }}</td>
+                            </tr>
+                            <tr>
+                                <th class="text-white-50">Course:</th>
+                                <td class="text-white">{{ student.course }} (Yr {{ student.year_level }})</td>
+                            </tr>
+                            <tr>
+                                <th class="text-white-50">Organization:</th>
+                                <td><span class="badge bg-secondary">{{ request.organization.code }}</span></td>
+                            </tr>
+                        </table>
+
+                        <hr style="border-color: rgba(255,255,255,0.1);">
+                        
+                        <h5 class="mb-3 text-white fw-bold"><i class="fas fa-file-invoice-dollar me-2 text-success"></i>Amount Due</h5>
+                        <div class="alert alert-success text-center py-3 shadow-sm" style="background: rgba(16, 185, 129, 0.1); border-left: 3px solid var(--success);">
+                            <p class="mb-1 text-white-50 small">{{ request.fee_type.name }}</p>
+                            <h2 class="mb-0 fw-bold text-success">₱{{ request.amount|floatformat:2 }}</h2>
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-7 ps-4">
+                        <h5 class="mb-3 text-white fw-bold"><i class="fas fa-money-check-alt me-2 text-success"></i>Payment Confirmation</h5>
+                        <form method="post" class="needs-validation" novalidate>
+                            {% csrf_token %}
+
+                            {% for hidden in form.hidden_fields %}{{ hidden }}{% endfor %}
+                            
+                            <div class="mb-3">
+                                <label class="form-label fw-bold text-white">Official Receipt Number</label>
+                                <input type="text" class="form-control form-control-lg" value="{{ or_number }}" readonly 
+                                       style="background: var(--bg-tertiary); color: var(--text-primary); font-weight: bold; border: 1px solid rgba(255,255,255,0.2);">
+                                <small class="form-text text-white-50">Auto-generated from QR code transaction ID</small>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label for="{{ form.payment_method.id_for_label }}" class="form-label fw-bold text-white">
+                                    <i class="fas fa-credit-card me-2" style="color: var(--accent-purple);"></i>{{ form.payment_method.label }}
+                                </label>
+                                {{ form.payment_method }}
+                                {% if form.payment_method.help_text %}
+                                    <small class="form-text text-white-50">{{ form.payment_method.help_text }}</small>
+                                {% endif %}
+                                {% for error in form.payment_method.errors %}
+                                    <div class="text-danger small mt-1">
+                                        <i class="fas fa-exclamation-circle me-1"></i>{{ error }}
+                                    </div>
+                                {% endfor %}
+                            </div>
+
+                            <div class="mb-3">
+                                <label for="{{ form.amount_received.id_for_label }}" class="form-label fw-bold text-white">Amount Received (₱)</label>
+                                {{ form.amount_received }}
+                                {% for error in form.amount_received.errors %}
+                                    <div class="text-danger small mt-1">
+                                        <i class="fas fa-exclamation-circle me-1"></i>{{ error }}
+                                    </div>
+                                {% endfor %}
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label class="form-label fw-bold text-white">Change Due</label>
+                                <input type="text" class="form-control form-control-lg" id="change_display" 
+                                       value="₱0.00" readonly style="background: var(--bg-tertiary); color: var(--text-primary); font-weight: bold; border: 1px solid rgba(255,255,255,0.2);">
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label for="{{ form.notes.id_for_label }}" class="form-label fw-bold text-white">{{ form.notes.label }}</label>
+                                {{ form.notes }}
+                                {% for error in form.notes.errors %}
+                                    <div class="text-danger small mt-1">
+                                        <i class="fas fa-exclamation-circle me-1"></i>{{ error }}
+                                    </div>
+                                {% endfor %}
+                            </div>
+
+                            <div class="d-grid gap-2 mt-4">
+                                <button type="submit" class="btn btn-success btn-lg shadow-lg">
+                                    <i class="fas fa-check-circle me-2"></i>Confirm Payment & Issue Receipt
+                                </button>
+                                <a href="{% url 'officer_dashboard' %}" class="btn btn-outline-secondary">Cancel</a>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const amountReceivedInput = document.getElementById('id_amount_received');
+        const changeDisplay = document.getElementById('change_display');
+        const amountDue = parseFloat('{{ request.amount|unlocalize }}'); 
+        
+        function calculateChange() {
+            const cashReceived = parseFloat(amountReceivedInput.value) || 0;
+            const change = cashReceived - amountDue;
+            
+            if (cashReceived < amountDue) {
+                changeDisplay.value = '₱' + change.toFixed(2) + ' (Insufficient)';
+                changeDisplay.style.color = '#ef4444';
+            } else {
+                changeDisplay.value = '₱' + change.toFixed(2);
+                changeDisplay.style.color = '#10b981';
+            }
+        }
+        
+        if (amountReceivedInput) {
+            amountReceivedInput.addEventListener('input', calculateChange);
+            calculateChange();
+        }
+    });
+</script>
+{% endblock %}
