@@ -14,10 +14,10 @@
         text-align: center;
     }
     .scanner-container {
-        background: var(--bg-tertiary);
+        background: var(--bg-secondary);
         border-radius: 1rem;
         padding: 2rem;
-        border: 1px solid rgba(255,255,255,0.1);
+        border: 1px solid var(--border-light);
     }
 </style>
 {% endblock %}
@@ -25,22 +25,22 @@
 {% block content %}
 <div class="row justify-content-center py-5">
     <div class="col-md-10 col-lg-8">
-        <div class="card border-0 shadow-2xl fade-in" style="background: var(--bg-card); border: 1px solid rgba(255,255,255,0.1);">
-            <div class="card-header border-0 py-4" style="background: var(--gradient-primary);">
+        <div class="card border-0 shadow-lg">
+            <div class="card-header bg-primary text-white py-4">
                 <div class="d-flex align-items-center">
                     <div class="bg-white bg-opacity-20 rounded-circle d-inline-flex align-items-center justify-content-center me-3" style="width: 50px; height: 50px;">
                         <i class="fas fa-qrcode fa-lg text-white"></i>
                     </div>
                     <div>
-                        <h3 class="mb-0 fw-bold text-white">QR Code Scanner</h3>
-                        <small class="text-white-50">Scan student QR code to process payment</small>
+                        <h3 class="mb-0 fw-bold">QR Code Scanner</h3>
+                        <small class="opacity-75">Scan student QR code to process payment</small>
                     </div>
                 </div>
             </div>
             <div class="card-body p-4">
                 <div class="text-center mb-4">
-                    <p class="lead text-white-50 mb-4">
-                        <i class="fas fa-camera me-2" style="color: var(--accent-purple);"></i>
+                    <p class="lead text-muted mb-4">
+                        <i class="fas fa-camera me-2 text-primary"></i>
                         Point your camera at the student's QR code
                     </p>
                 </div>

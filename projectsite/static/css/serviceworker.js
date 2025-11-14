@@ -11,3 +11,4 @@ self.addEventListener('fetch', (event) => {
   // Passthrough - do not cache in development
   return;
 });
+

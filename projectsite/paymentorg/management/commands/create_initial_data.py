@@ -29,7 +29,7 @@ class Command(BaseCommand):
 
     def add_arguments(self, parser):
         parser.add_argument("--students", type=int, default=10, help="Number of students to create (default: 10)")
-        parser.add_argument("--orgs", type=int, default=6, help="Number of organizations to create (default: 6)")
+        parser.add_argument("--orgs", type=int, default=7, help="Number of organizations to create (default: 7 - includes 5 Tier 1 + 2 Tier 2)")
         parser.add_argument("--fees", type=int, default=3, help="Fee types per org (default: 3)")
         parser.add_argument("--requests", type=int, default=1, help="Payment requests per student (default: 1)")
         parser.add_argument(
@@ -56,7 +56,8 @@ class Command(BaseCommand):
             ("BSCS", "Bachelor of Science in Computer Science", "TIER_1", "COMPUTER_SCIENCE"),
             ("BSES", "Bachelor of Science in Environmental Science", "TIER_1", "ENVIRONMENTAL_SCIENCE"),
             ("BSIT", "Bachelor of Science in Information Technology", "TIER_1", "INFORMATION_TECHNOLOGY"),
-            ("STUDORG", "Student organizations", "TIER_2", "ALL"),
+            ("CSG", "College Student Government", "TIER_2", "ALL"),
+            ("COMPENDIUM", "Compendium", "TIER_2", "ALL"),
         ]
         # ensure we don't slice beyond available data
         selected_orgs = requested_orgs[: max(1, min(num_orgs, len(requested_orgs)))]
@@ -89,37 +90,25 @@ class Command(BaseCommand):
         self.stdout.write(self.style.SUCCESS(f"Organizations: {len(organizations)}"))
 
         self.stdout.write(self.style.MIGRATE_HEADING("Creating colleges/departments"))
-        colleges_data = [
-            ("College of Sciences", "COS"),
-            ("College of Engineering", "COE"),
-            ("College of Arts and Letters", "CAL"),
-            ("College of Business Administration", "CBA"),
-        ]
-        colleges = []
-        for name, code in colleges_data:
-            college, _ = College.objects.get_or_create(
-                code=code,
-                defaults={
-                    "name": name,
-                    "description": f"Seeded {name}",
-                },
-            )
-            colleges.append(college)
-        self.stdout.write(self.style.SUCCESS(f"Colleges: {len(colleges)}"))
+        # System is focused on College of Sciences only
+        college, _ = College.objects.get_or_create(
+            code="COS",
+            defaults={
+                "name": "College of Sciences",
+                "description": "College of Sciences - Primary focus of the system",
+            },
+        )
+        colleges = [college]
+        self.stdout.write(self.style.SUCCESS(f"College: {college.name}"))
 
         self.stdout.write(self.style.MIGRATE_HEADING("Creating courses/programs"))
+        # Only the 5 specified programs for College of Sciences
         courses_data = [
-            ("Bachelor of Science in Biology", "BSBIO", "MEDICAL_BIOLOGY", colleges[0]),
-            ("Bachelor of Science in Marine Biology", "BSMBIO", "MARINE_BIOLOGY", colleges[0]),
-            ("Bachelor of Science in Computer Science", "BSCS", "COMPUTER_SCIENCE", colleges[0]),
-            ("Bachelor of Science in Environmental Science", "BSES", "ENVIRONMENTAL_SCIENCE", colleges[0]),
-            ("Bachelor of Science in Information Technology", "BSIT", "INFORMATION_TECHNOLOGY", colleges[0]),
-            ("Bachelor of Science in Chemistry", "BSCHEM", "OTHER", colleges[0]),
-            ("Bachelor of Science in Mathematics", "BSMATH", "OTHER", colleges[0]),
-            ("Bachelor of Science in Civil Engineering", "BSCE", "OTHER", colleges[1]),
-            ("Bachelor of Science in Electrical Engineering", "BSEE", "OTHER", colleges[1]),
-            ("Bachelor of Arts in English", "BAENG", "OTHER", colleges[2]),
-            ("Bachelor of Science in Business Administration", "BSBA", "OTHER", colleges[3]),
+            ("Bachelor of Science in Biology", "BSBIO", "MEDICAL_BIOLOGY", college),
+            ("Bachelor of Science in Marine Biology", "BSMBIO", "MARINE_BIOLOGY", college),
+            ("Bachelor of Science in Computer Science", "BSCS", "COMPUTER_SCIENCE", college),
+            ("Bachelor of Science in Environmental Science", "BSES", "ENVIRONMENTAL_SCIENCE", college),
+            ("Bachelor of Science in Information Technology", "BSIT", "INFORMATION_TECHNOLOGY", college),
         ]
         courses = []
         for name, code, program_type, college in courses_data:
@@ -225,7 +214,7 @@ class Command(BaseCommand):
             su_student.save()
         UserProfile.objects.update_or_create(user=su_student, defaults={"is_officer": False})
         default_course = courses[0] if courses else None
-        default_college = default_course.college if default_course else (colleges[0] if colleges else None)
+        default_college = default_course.college if default_course else college
         if default_course and default_college:
             Student.objects.get_or_create(
                 user=su_student,
@@ -279,7 +268,7 @@ class Command(BaseCommand):
             user.save()
             UserProfile.objects.update_or_create(user=user, defaults={"is_officer": False})
             selected_course = choice(courses) if courses else None
-            selected_college = selected_course.college if selected_course else (colleges[0] if colleges else None)
+            selected_college = selected_course.college if selected_course else college
             if selected_course and selected_college:
                 student, _ = Student.objects.get_or_create(
                     user=user,
@@ -349,7 +338,7 @@ class Command(BaseCommand):
     def _clear_existing_data(self):
         self.stdout.write(self.style.WARNING("Reset flag detected – clearing previously generated fake data."))
 
-        org_codes = {"BIO", "MBIO", "BSCS", "BSES", "BSIT", "STUDORG"}
+        org_codes = {"BIO", "MBIO", "BSCS", "BSES", "BSIT", "CSG", "COMPENDIUM"}
         student_prefix = "student"
         officer_prefix = "officer_"
         special_usernames = {"superofficer", "superstudent"}
@@ -387,18 +376,13 @@ class Command(BaseCommand):
 
         # Delete courses AFTER students (students reference courses with PROTECT)
         # Only delete courses that aren't referenced by any remaining students
+        # Only the 5 specified programs
         course_codes = {
             "BSBIO",
             "BSMBIO",
             "BSCS",
             "BSES",
             "BSIT",
-            "BSCHEM",
-            "BSMATH",
-            "BSCE",
-            "BSEE",
-            "BAENG",
-            "BSBA",
         }
         # Get courses that have no students referencing them
         # Exclude courses that are referenced by any students
@@ -417,6 +401,7 @@ class Command(BaseCommand):
             )
 
         # Delete colleges AFTER courses (courses reference colleges)
-        College.objects.filter(code__in={"COS", "COE", "CAL", "CBA"}).delete()
+        # Only College of Sciences
+        College.objects.filter(code="COS").delete()
 
         self.stdout.write(self.style.SUCCESS("Previous fake data cleared."))

@@ -5,15 +5,15 @@
 {% block content %}
 <div class="row justify-content-center py-5">
     <div class="col-md-10 col-lg-8">
-        <div class="card border-0 shadow-2xl fade-in" style="background: var(--bg-card); border: 1px solid rgba(255,255,255,0.1);">
-            <div class="card-header border-0 py-4" style="background: var(--gradient-warm);">
+        <div class="card border-0 shadow-lg">
+            <div class="card-header bg-success text-white py-4">
                 <div class="d-flex align-items-center">
                     <div class="bg-white bg-opacity-20 rounded-circle d-inline-flex align-items-center justify-content-center me-3" style="width: 50px; height: 50px;">
                         <i class="fas fa-bullhorn fa-lg text-white"></i>
                     </div>
                     <div>
-                        <h3 class="mb-0 fw-bold text-white">Post Payment to All Students</h3>
-                        <small class="text-white-50">Create payment requests for eligible students</small>
+                        <h3 class="mb-0 fw-bold">Post Payment to All Students</h3>
+                        <small class="opacity-75">Create payment requests for eligible students</small>
                     </div>
                 </div>
             </div>
@@ -38,8 +38,8 @@
                     
                     <div class="row g-3 mb-4">
                         <div class="col-md-6">
-                            <label for="{{ form.fee_type_name.id_for_label }}" class="form-label fw-semibold text-white">
-                                <i class="fas fa-tag me-2" style="color: var(--accent-purple);"></i>{{ form.fee_type_name.label }} <span class="text-danger">*</span>
+                            <label for="{{ form.fee_type_name.id_for_label }}" class="form-label fw-semibold">
+                                <i class="fas fa-tag me-2 text-primary"></i>{{ form.fee_type_name.label }} <span class="text-danger">*</span>
                             </label>
                             {{ form.fee_type_name }}
                             {% if form.fee_type_name.help_text %}
@@ -53,7 +53,7 @@
                         </div>
                         
                         <div class="col-md-6">
-                            <label for="{{ form.fee_amount.id_for_label }}" class="form-label fw-semibold text-white">
+                            <label for="{{ form.fee_amount.id_for_label }}" class="form-label fw-semibold">
                                 <i class="fas fa-money-bill-wave me-2 text-success"></i>{{ form.fee_amount.label }} <span class="text-danger">*</span>
                             </label>
                             {{ form.fee_amount }}
@@ -69,8 +69,8 @@
                     </div>
                     
                     <div class="mb-4">
-                        <label for="{{ form.notes.id_for_label }}" class="form-label fw-semibold text-white">
-                            <i class="fas fa-sticky-note me-2" style="color: var(--info);"></i>{{ form.notes.label }}
+                        <label for="{{ form.notes.id_for_label }}" class="form-label fw-semibold">
+                            <i class="fas fa-sticky-note me-2 text-info"></i>{{ form.notes.label }}
                         </label>
                         {{ form.notes }}
                         {% for error in form.notes.errors %}

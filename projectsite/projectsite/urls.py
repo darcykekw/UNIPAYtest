@@ -19,6 +19,8 @@ from django.contrib import admin
 from django.contrib.auth import views as auth_views
 from paymentorg import views
 from django.views.generic import TemplateView
+from django.conf import settings
+from django.conf.urls.static import static
 
 # initial urlpatterns list
 
@@ -99,7 +101,4 @@ urlpatterns = [
     
     path('staff/activity-logs/', views.ActivityLogListView.as_view(), name='activitylog_list'),
     path('staff/org/<str:code>/dashboard/', views.AdminOrganizationDashboardView.as_view(), name='admin_org_dashboard'),
-    
-    # PWA: service worker (served as template for dev)
-    path('serviceworker.js', TemplateView.as_view(template_name='serviceworker.js', content_type='application/javascript'), name='serviceworker'),
 ]

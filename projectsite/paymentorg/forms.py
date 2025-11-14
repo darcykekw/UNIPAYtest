@@ -43,13 +43,15 @@ class StudentRegistrationForm(UserCreationForm):
         queryset=College.objects.none(),
         label="College/Department",
         widget=forms.Select(attrs={'class': 'form-select'}),
-        empty_label="Select College/Department"
+        empty_label="Select College/Department",
+        help_text="College of Sciences (COS) - This system is designed for College of Sciences only"
     )
     course = forms.ModelChoiceField(
         queryset=Course.objects.none(),
         label="Course/Program",
         widget=forms.Select(attrs={'class': 'form-select'}),
-        empty_label="Select Course/Program"
+        empty_label="Select Course/Program",
+        help_text="Select one of the 5 supported programs: Medical Biology, Marine Biology, Computer Science, Environmental Science, or Information Technology"
     )
     year_level = forms.IntegerField(
         min_value=1, max_value=5,
@@ -135,12 +137,18 @@ class StudentRegistrationForm(UserCreationForm):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-        colleges_qs = College.objects.filter(is_active=True).order_by('name')
-        courses_qs = Course.objects.filter(is_active=True).select_related('college').order_by('college__name', 'name')
+        # System is focused on College of Sciences only
+        colleges_qs = College.objects.filter(code="COS", is_active=True).order_by('name')
+        # Only show the 5 supported programs (filter by program_type to exclude 'OTHER')
+        courses_qs = Course.objects.filter(
+            college__code="COS", 
+            is_active=True,
+            program_type__in=['MEDICAL_BIOLOGY', 'MARINE_BIOLOGY', 'COMPUTER_SCIENCE', 'ENVIRONMENTAL_SCIENCE', 'INFORMATION_TECHNOLOGY']
+        ).select_related('college').order_by('name')
 
         self.fields['college'].queryset = colleges_qs
         self.fields['course'].queryset = courses_qs
-        self.fields['course'].label_from_instance = lambda obj: f"{obj.name} ({obj.college.name})"
+        self.fields['course'].label_from_instance = lambda obj: f"{obj.name}"
 
         selected_college = None
         if 'college' in self.data and self.data.get('college'):

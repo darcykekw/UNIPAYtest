@@ -123,12 +123,18 @@ class StudentRegistrationView(CreateView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
 
-        courses = Course.objects.filter(is_active=True).select_related('college').order_by('college__name', 'name')
+        # System is focused on College of Sciences only
+        courses = Course.objects.filter(
+            college__code="COS", 
+            is_active=True,
+            program_type__in=['MEDICAL_BIOLOGY', 'MARINE_BIOLOGY', 'COMPUTER_SCIENCE', 'ENVIRONMENTAL_SCIENCE', 'INFORMATION_TECHNOLOGY']
+        ).select_related('college').order_by('name')
         course_payload = [
             {
                 'id': course.id,
-                'label': f"{course.name} ({course.college.name})",
+                'label': course.name,
                 'college_id': course.college_id,
+                'program_type': course.program_type,
             }
             for course in courses
         ]
@@ -285,6 +291,22 @@ class GenerateQRPaymentView(StudentRequiredMixin, CreateView):
         kwargs['student'] = student
         # Use two-tiered fee system: only show applicable fees
         return kwargs
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        student = self.request.user.student_profile
+        applicable_fees = student.get_applicable_fees()
+        fee_org_map = {
+            fee.id: {
+                'org_name': fee.organization.name,
+                'org_code': fee.organization.code,
+                'org_logo': fee.organization.get_logo_path(),
+            }
+            for fee in applicable_fees
+        }
+        import json
+        context['fee_org_map_json'] = json.dumps(fee_org_map)
+        return context
     
     @transaction.atomic
     def form_valid(self, form):

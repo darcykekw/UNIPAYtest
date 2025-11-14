@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 
-{% block title %}Payment QR: {{ request.queue_number }}{% endblock %}
+{% block title %}Payment QR: {{ request.queue_number }} - UniPay{% endblock %}
 
 {% block extra_head %}
     <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js" onload="initQRCode()" onerror="loadQRCodeFallback()"></script>
@@ -14,7 +14,6 @@
         
         function initQRCode() {
             if (typeof QRCode !== 'undefined') {
-                // Library loaded, generate QR code
                 setTimeout(function() {
                     try {
                         var qrElement = document.getElementById("qrcode");
@@ -44,24 +43,30 @@
 {% block content %}
 <div class="row justify-content-center">
     <div class="col-md-7">
-        <div class="card text-center shadow border-primary">
-            <div class="card-header card-header-student">
-                <h2 class="mb-0"><i class="fas fa-ticket-alt me-2"></i>Your Queue Ticket</h2>
+        <div class="card text-center shadow-lg border-primary">
+            <div class="card-header bg-primary text-white">
+                <div class="d-flex justify-content-between align-items-center">
+                    <h2 class="mb-0"><i class="fas fa-ticket-alt me-2"></i>Your Queue Ticket</h2>
+                    {% if request.organization.get_logo_path %}
+                        <img src="{{ request.organization.get_logo_path }}" alt="{{ request.organization.name }} Logo" 
+                             class="img-fluid" style="max-height: 50px; max-width: 150px; object-fit: contain; background: white; padding: 5px; border-radius: 5px;">
+                    {% endif %}
+                </div>
             </div>
             <div class="card-body">
                 
                 <div id="status-alert">
                     {% if request.status == 'PENDING' %}
-                        <div class="alert alert-warning animate__animated animate__fadeIn" role="alert">
-                            <i class="fas fa-exclamation-triangle me-2"></i>**Status: PENDING.** Present this QR code at the <b>{{ request.organization.code }}</b> booth.
+                        <div class="alert alert-warning" role="alert">
+                            <i class="fas fa-exclamation-triangle me-2"></i><strong>Status: PENDING.</strong> Present this QR code at the <b>{{ request.organization.code }}</b> booth.
                         </div>
                     {% elif request.status == 'EXPIRED' %}
                         <div class="alert alert-danger" role="alert">
-                            <i class="fas fa-ban me-2"></i>**Status: EXPIRED.** This request has timed out. Please generate a new QR code.
+                            <i class="fas fa-ban me-2"></i><strong>Status: EXPIRED.</strong> This request has timed out. Please generate a new QR code.
                         </div>
                     {% elif request.status == 'PAID' %}
                         <div class="alert alert-success" role="alert">
-                            <i class="fas fa-check-circle me-2"></i>**Status: PAID.** Payment completed successfully!
+                            <i class="fas fa-check-circle me-2"></i><strong>Status: PAID.</strong> Payment completed successfully!
                         </div>
                     {% endif %}
                 </div>
@@ -70,8 +75,8 @@
                 <p class="text-muted">For: <b>{{ request.fee_type.name }}</b> (₱{{ request.amount|floatformat:2 }})</p>
                 <hr>
                 
-                <div id="qrcode" class="my-4 mx-auto border border-3 p-2 rounded" style="width:220px; height:220px;">
-                    </div>
+                <div id="qrcode" class="my-4 mx-auto border border-3 p-2 rounded" style="width:220px; height:220px; border-color: var(--green-primary) !important;">
+                </div>
                 
                 <p class="text-muted small mb-1">
                     Request Valid Until: <span id="expires-at" class="fw-bold">{{ request.expires_at|date:"F j, Y, g:i a" }}</span>
@@ -87,11 +92,9 @@
 
 {% block extra_js %}
 <script>
-    // Ensure QR code is generated if library already loaded
     if (typeof QRCode !== 'undefined') {
         initQRCode();
     } else {
-        // Wait for library to load
         window.addEventListener('load', function() {
             if (typeof QRCode !== 'undefined') {
                 initQRCode();
@@ -101,7 +104,6 @@
         });
     }
 
-    // 2. Poll the API for status updates
     function checkStatus() {
         const url = "{% url 'api_request_status' request.request_id %}";
         
@@ -113,12 +115,11 @@
                 
                 if (data.status === 'PAID') {
                     clearInterval(pollInterval);
-                    statusAlert.innerHTML = '<div class="alert alert-success"><i class="fas fa-check-circle me-2"></i>**Status: PAID.** Payment completed successfully!</div>';
+                    statusAlert.innerHTML = '<div class="alert alert-success"><i class="fas fa-check-circle me-2"></i><strong>Status: PAID.</strong> Payment completed successfully!</div>';
                     timeRemainingDiv.textContent = 'Transaction Complete.';
-                    // Optional: Redirect to a payment receipt view if implemented
                 } else if (data.status === 'EXPIRED' || data.is_expired) {
                     clearInterval(pollInterval);
-                    statusAlert.innerHTML = '<div class="alert alert-danger"><i class="fas fa-ban me-2"></i>**Status: EXPIRED.** This request has timed out. Please generate a new QR code.</div>';
+                    statusAlert.innerHTML = '<div class="alert alert-danger"><i class="fas fa-ban me-2"></i><strong>Status: EXPIRED.</strong> This request has timed out. Please generate a new QR code.</div>';
                     timeRemainingDiv.textContent = 'EXPIRED';
                 } else if (data.status === 'PENDING') {
                     timeRemainingDiv.textContent = 'Expires In: ' + data.time_remaining;
@@ -130,10 +131,7 @@
             });
     }
 
-    // Poll every 5 seconds 
     const pollInterval = setInterval(checkStatus, 5000);
-    
-    // Initial check
     checkStatus(); 
 
     window.onbeforeunload = function() {

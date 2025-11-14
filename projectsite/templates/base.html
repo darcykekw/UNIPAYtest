@@ -19,94 +19,6 @@
     <!-- Custom Styles -->
     {% load static %}
     <link rel="stylesheet" href="{% static 'css/style.css' %}">
-    <style>
-      :root {
-        --liquid-pink: #ff5db1;
-        --liquid-rose: #ff7bd5;
-        --liquid-gold: #ffd36e;
-        --ink-deep: #1a1020;
-        --ink-mid: #23122a;
-        --glass: rgba(255, 255, 255, 0.12);
-        --glass-stroke: rgba(255, 255, 255, 0.25);
-        --bg-card: rgba(255, 255, 255, 0.08);
-        --gradient-primary: linear-gradient(135deg, #ff8ad4 0%, #ffa3cf 35%, #ffd36e 100%);
-        --gradient-warm: linear-gradient(135deg, #ffa3cf 0%, #ff8ad4 40%, #ffd36e 100%);
-      }
-
-      html, body {
-        height: 100%;
-        color: #fff5fb;
-        font-family: 'Inter', system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, 'Apple Color Emoji', 'Segoe UI Emoji', sans-serif;
-        background:
-          radial-gradient(1200px 800px at 10% 20%, rgba(255,216,245,0.12), transparent 70%),
-          radial-gradient(700px 500px at 90% 0%, rgba(255,230,200,0.12), transparent 60%),
-          linear-gradient(180deg, var(--ink-deep), var(--ink-mid));
-      }
-
-      /* remove animated shimmer overlay for performance */
-      body::before { content: none !important; }
-
-      .navbar {
-        background: linear-gradient(180deg, rgba(26,16,32,0.85), rgba(26,16,32,0.55)) !important;
-        backdrop-filter: blur(10px);
-        border-bottom: 1px solid rgba(255,255,255,0.08);
-      }
-      .navbar .nav-link, .navbar .navbar-brand { color: #ffe9fb !important; }
-      .navbar .btn { border-color: rgba(255,255,255,0.25) !important; color: #ffe9fb !important; }
-
-      .card {
-        background: var(--bg-card);
-        border: 1px solid var(--glass-stroke);
-        box-shadow: 0 10px 30px rgba(255, 114, 194, 0.12), inset 0 0 0 1px rgba(255,255,255,0.04);
-        backdrop-filter: blur(12px);
-      }
-
-      .btn-primary { background: var(--liquid-pink); border-color: var(--liquid-pink); box-shadow: 0 8px 18px rgba(255,93,177,0.35); }
-      .btn-success { background: #46e0b5; border-color: #46e0b5; box-shadow: 0 8px 18px rgba(70,224,181,0.3); }
-      .btn-outline-primary { color: #ffd0ef; border-color: #ff9cda; }
-      .btn-outline-secondary { color: #e8d7e8; border-color: rgba(255,255,255,0.35); }
-
-      .badge.bg-warning { background-color: var(--liquid-gold) !important; color: #3a2a00; }
-      .text-white-50 { color: rgba(255, 240, 250, 0.78) !important; }
-
-      /* gradient helpers */
-      .gradient-card { background: linear-gradient(180deg, rgba(255,255,255,0.06), rgba(255,255,255,0.03)); }
-      .abstract-bg-1 { background-image: radial-gradient(600px 300px at -10% -20%, rgba(255,154,222,0.25), transparent 35%), radial-gradient(400px 200px at 120% 50%, rgba(255,211,110,0.22), transparent 40%); }
-      .abstract-bg-2 { background-image: radial-gradient(500px 250px at 10% 120%, rgba(255,154,222,0.2), transparent 40%), radial-gradient(350px 200px at 80% -10%, rgba(255,211,110,0.18), transparent 45%); }
-      .abstract-bg-3 { background-image: radial-gradient(600px 260px at 0% 60%, rgba(255,211,110,0.22), transparent 40%), radial-gradient(350px 220px at 110% 20%, rgba(255,154,222,0.22), transparent 45%); }
-
-      .alert { border: 1px solid rgba(255,255,255,0.12); }
-
-      /* readability: enforce light text on dark cards */
-      .card, .card-body, .modal-content { color: #fff5fb; }
-      .table { color: #f8eaf6; }
-      .table thead th { color: #ffecf9; border-color: rgba(255,255,255,0.12); }
-      .table tbody td { border-color: rgba(255,255,255,0.08); }
-
-      /* forms */
-      .form-label { color: #ffe9fb; }
-      .form-text { color: rgba(255,240,250,0.75) !important; }
-      .form-control, .form-select, .form-check-input {
-        background: rgba(255,255,255,0.06);
-        color: #ffffff;
-        border: 1px solid rgba(255,255,255,0.25);
-      }
-      .form-select option {
-        background: #ffe9fb;
-        color: #1a1020;
-      }
-      .form-control::placeholder { color: rgba(255,255,255,0.55); }
-      .form-control:focus, .form-select:focus {
-        box-shadow: 0 0 0 0.25rem rgba(255,138,212,0.25);
-        border-color: #ff9cda;
-        background: rgba(255,255,255,0.08);
-        color: #ffffff;
-      }
-
-      /* links */
-      a { color: #ffd0ef; }
-      a:hover { color: #ff8ad4; text-decoration: underline; }
-    </style>
     
     {% block extra_head %}{% endblock %}
 </head>
@@ -158,7 +70,7 @@
     <div class="container mt-4">
         {% if messages %}
             {% for message in messages %}
-                <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert" style="background: rgba(40,20,45,0.6); color: #ffe9fb; border: 1px solid rgba(255,255,255,0.12);">
+                <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
                     <i class="fas fa-{% if message.tags == 'success' %}check-circle{% elif message.tags == 'error' or message.tags == 'danger' %}exclamation-circle{% elif message.tags == 'warning' %}exclamation-triangle{% else %}info-circle{% endif %} me-2"></i>
                     {{ message }}
                     <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>

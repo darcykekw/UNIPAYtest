@@ -4,21 +4,21 @@
 
 {% block content %}
 <div class="row justify-content-center py-5">
-    <div class="col-12 text-center mb-5 fade-in">
+    <div class="col-12 text-center mb-5">
         <div class="mb-4">
-            <div class="bg-gradient-primary rounded-circle d-inline-flex align-items-center justify-content-center mb-3" style="width: 100px; height: 100px;">
+            <div class="bg-primary rounded-circle d-inline-flex align-items-center justify-content-center mb-3" style="width: 100px; height: 100px;">
                 <i class="fas fa-user-plus fa-4x text-white"></i>
             </div>
         </div>
-        <h1 class="display-5 fw-bold mb-3">Create Your Account</h1>
+        <h1 class="display-5 fw-bold mb-3 text-primary">Create Your Account</h1>
         <p class="lead text-muted">Choose your role to get started with UniPay</p>
     </div>
 </div>
 
 <div class="row justify-content-center g-4 mb-5">
     <div class="col-md-5">
-        <div class="card shadow-lg h-100 hover-lift">
-            <div class="card-header bg-gradient-primary text-white py-4 text-center">
+        <div class="card shadow-lg h-100 border-0 hover-lift">
+            <div class="card-header bg-primary text-white py-4 text-center">
                 <div class="bg-white bg-opacity-20 rounded-circle d-inline-flex align-items-center justify-content-center mb-3" style="width: 80px; height: 80px;">
                     <i class="fas fa-graduation-cap fa-3x"></i>
                 </div>
@@ -52,8 +52,8 @@
 }
 
 .hover-lift:hover {
-    transform: translateY(-10px);
-    box-shadow: 0 20px 40px rgba(0,0,0,0.15) !important;
+    transform: translateY(-5px);
+    box-shadow: 0 15px 35px rgba(0,0,0,0.1) !important;
 }
 </style>
 {% endblock %}

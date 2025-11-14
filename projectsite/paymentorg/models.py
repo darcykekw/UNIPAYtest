@@ -61,7 +61,7 @@ class College(BaseModel):
 class Course(BaseModel):
     """
     Academic programs/courses.
-    Supports the 5 specific programs: Medical Biology, Marine Biology, 
+    System supports ONLY these 5 programs: Medical Biology, Marine Biology, 
     Computer Science, Environmental Science, Information Technology
     """
     PROGRAM_CHOICES = [
@@ -70,7 +70,7 @@ class Course(BaseModel):
         ('COMPUTER_SCIENCE', 'Computer Science'),
         ('ENVIRONMENTAL_SCIENCE', 'Environmental Science'),
         ('INFORMATION_TECHNOLOGY', 'Information Technology'),
-        ('OTHER', 'Other'),
+        ('OTHER', 'Other'),  # Reserved for edge cases, not used in normal operations
     ]
     
     name = models.CharField(max_length=200, verbose_name="Course/Program Name")
@@ -79,9 +79,9 @@ class Course(BaseModel):
     program_type = models.CharField(
         max_length=50,
         choices=PROGRAM_CHOICES,
-        default='OTHER',
+        default='MEDICAL_BIOLOGY',  # Default to first of the 5 supported programs
         verbose_name="Program Type",
-        help_text="Select the specific program type for fee calculation"
+        help_text="Select one of the 5 supported programs: Medical Biology, Marine Biology, Computer Science, Environmental Science, or Information Technology"
     )
     description = models.TextField(blank=True, verbose_name="Description")
 
@@ -95,8 +95,31 @@ class Course(BaseModel):
         return f"{self.name} ({self.college.name})"
     
     def is_program_specific(self):
-        """Check if this course is one of the 5 specific programs"""
+        """Check if this course is one of the 5 supported programs"""
         return self.program_type != 'OTHER'
+    
+    def get_logo_path(self):
+        """Get the static path to the program logo"""
+        from django.contrib.staticfiles.storage import staticfiles_storage
+        from django.conf import settings
+        
+        # Map program types to logo filenames
+        logo_map = {
+            'MEDICAL_BIOLOGY': 'Medical Biology.png',
+            'MARINE_BIOLOGY': 'Marine Biology.png',
+            'COMPUTER_SCIENCE': 'Computer Science.png',
+            'ENVIRONMENTAL_SCIENCE': 'Environmental Science.png',
+            'INFORMATION_TECHNOLOGY': 'Information Technology.png',
+        }
+        
+        logo_filename = logo_map.get(self.program_type)
+        if logo_filename:
+            try:
+                return staticfiles_storage.url(logo_filename)
+            except:
+                # Fallback to manual URL construction
+                return f"{settings.STATIC_URL}{logo_filename}"
+        return None
 
 class Student(BaseModel):
     user = models.OneToOneField(
@@ -490,6 +513,39 @@ class Organization(BaseModel):
     def get_pending_requests_count(self):
         """Get count of pending payment requests"""
         return self.payment_requests.filter(status='PENDING').count()
+    
+    def get_logo_path(self):
+        """Get the static path to the organization logo"""
+        from django.contrib.staticfiles.storage import staticfiles_storage
+        from django.conf import settings
+        
+        # Explicit map for known organization logos
+        name_logo_map = {
+            'College Student Government': 'College Student Government.png',
+            'Compendium': 'Compendium.png',
+        }
+        
+        # Reuse program logos for Tier 1 orgs via their program affiliation
+        program_logo_map = {
+            'MEDICAL_BIOLOGY': 'Medical Biology.png',
+            'MARINE_BIOLOGY': 'Marine Biology.png',
+            'COMPUTER_SCIENCE': 'Computer Science.png',
+            'ENVIRONMENTAL_SCIENCE': 'Environmental Science.png',
+            'INFORMATION_TECHNOLOGY': 'Information Technology.png',
+        }
+        
+        logo_filename = name_logo_map.get(self.name)
+        if not logo_filename and self.program_affiliation:
+            logo_filename = program_logo_map.get(self.program_affiliation)
+        
+        if not logo_filename:
+            return None
+        
+        try:
+            return staticfiles_storage.url(logo_filename)
+        except:
+            # Fallback to manual URL construction
+            return f"{settings.STATIC_URL}{logo_filename}"
 
 
 class FeeType(BaseModel):
