@@ -52,15 +52,6 @@ def validate_signature(message_string, provided_signature):
     expected_signature = create_signature(message_string)
     return hmac.compare_digest(expected_signature, provided_signature)
 
-def generate_queue_number(organization):
-    today = timezone.now().date()
-    count = PaymentRequest.objects.filter(
-        organization=organization,
-        created_at__date=today
-    ).count()
-    prefix = organization.code[:3].upper()
-    return f"{prefix}-{count + 1:03d}"
-
 # authentication views
 class CustomLoginView(LoginView):
     template_name = 'registration/login.html'
@@ -317,14 +308,11 @@ class GenerateQRPaymentView(StudentRequiredMixin, CreateView):
            Payment.objects.filter(student=student, fee_type=fee_type, status='COMPLETED').exists():
             messages.error(self.request, "You already have a pending or completed payment for this fee.")
             return redirect('student_dashboard')
-            
-        queue_number = generate_queue_number(fee_type.organization)
         
         payment_request = form.save(commit=False)
         payment_request.student = student
         payment_request.organization = fee_type.organization
         payment_request.amount = fee_type.amount
-        payment_request.queue_number = queue_number
         payment_request.payment_method = 'CASH'  # default payment method(for now)
         payment_request.expires_at = timezone.now() + timedelta(minutes=15)
         payment_request.qr_signature = create_signature(payment_request.request_id)
@@ -333,14 +321,14 @@ class GenerateQRPaymentView(StudentRequiredMixin, CreateView):
         ActivityLog.objects.create(
             user=self.request.user,
             action='qr_generated',
-            description=f'Student {student.student_id_number} generated QR for {fee_type.name} - {queue_number}',
+            description=f'Student {student.student_id_number} generated QR for {fee_type.name}',
             payment_request=payment_request,
             ip_address=self.request.META.get('REMOTE_ADDR')
         )
         
         messages.success(
             self.request, 
-            f'QR code generated! Queue: {queue_number} at {fee_type.organization.code} booth.'
+            f'QR code generated! Present this at the {fee_type.organization.code} booth.'
         )
         return redirect('show_payment_qr', request_id=payment_request.request_id)
 
@@ -748,16 +736,12 @@ class PostBulkPaymentView(OfficerRequiredMixin, View):
             # create paymentrequest objects for each student
             for student in students:
                 try:
-                    # generate queue number
-                    queue_number = generate_queue_number(organization)
-                    
                     # create paymentrequest with unique request_id
                     payment_request = PaymentRequest.objects.create(
                         student=student,
                         organization=organization,
                         fee_type=fee_type,
                         amount=fee_amount,
-                        queue_number=queue_number,
                         payment_method='CASH',  # Default, student will select when generating QR
                         status='PENDING',
                         expires_at=timezone.now() + timedelta(days=30),  # Give students 30 days to pay

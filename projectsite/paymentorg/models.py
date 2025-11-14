@@ -665,12 +665,6 @@ class PaymentRequest(BaseModel):
         verbose_name="Amount (₱)"
     )
     
-    queue_number = models.CharField(
-        max_length=10,
-        verbose_name="Queue Number",
-        help_text="e.g., A-042"
-    )
-    
     # Payment Method (selected by student when generating QR)
     payment_method = models.CharField(
         max_length=20,
@@ -716,13 +710,12 @@ class PaymentRequest(BaseModel):
         verbose_name_plural = "Payment Requests"
         ordering = ['-created_at']
         indexes = [
-            models.Index(fields=['queue_number']),
             models.Index(fields=['status']),
             models.Index(fields=['student', 'status']),
         ]
 
     def __str__(self):
-        return f"{self.queue_number} - {self.student.student_id_number} - ₱{self.amount}"
+        return f"{self.student.student_id_number} - {self.fee_type.name} - ₱{self.amount}"
 
     def is_expired(self):
         """Check if payment request has expired"""

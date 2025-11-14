@@ -47,7 +47,7 @@
         <ul class="list-group list-group-flush">
           {% for r in pending_requests %}
           <li class="list-group-item" style="background: transparent; border-bottom: 1px solid rgba(255,255,255,0.1)">
-            <span class="badge bg-info me-2">{{ r.queue_number }}</span>{{ r.student.get_full_name }} - ₱{{ r.amount|floatformat:2 }}
+            {{ r.student.get_full_name }} - ₱{{ r.amount|floatformat:2 }}
           </li>
           {% endfor %}
         </ul>

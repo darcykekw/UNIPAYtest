@@ -299,7 +299,6 @@ class Command(BaseCommand):
                     organization=fee.organization,
                     fee_type=fee,
                     amount=fee.amount,
-                    queue_number=f"{fee.organization.code}-{randint(1,999):03d}",
                     defaults={
                         "payment_method": "CASH",
                         "status": "PENDING",

@@ -186,16 +186,16 @@ class FeeTypeAdmin(admin.ModelAdmin):
 @admin.register(PaymentRequest)
 class PaymentRequestAdmin(admin.ModelAdmin):
     list_display = (
-        'queue_number', 'student_info', 'organization', 'fee_type',
+        'request_id', 'student_info', 'organization', 'fee_type',
         'amount', 'status_display', 'created_at', 'expires_at', 'is_expired_display'
     )
-    list_display_links = ('queue_number',)
+    list_display_links = ('request_id',)
     list_filter = ('status', 'organization', 'created_at', 'is_active')
-    search_fields = ('queue_number', 'student__student_id_number', 'student__last_name', 'organization__code')
+    search_fields = ('request_id', 'student__student_id_number', 'student__last_name', 'organization__code')
     readonly_fields = (
         'request_id', 'student', 'organization', 'fee_type',
         'qr_signature', 'created_at', 'updated_at', 'expires_at', 'paid_at',
-        'amount', 'queue_number', 'status'
+        'amount', 'status'
     )
     list_per_page = 50
     actions = ['mark_as_cancelled_action', 'mark_as_expired_action']

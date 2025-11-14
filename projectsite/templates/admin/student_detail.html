@@ -60,7 +60,7 @@
                             <div class="d-flex justify-content-between">
                                 <div>
                                     <strong>{{ request.fee_type.organization.code }} - {{ request.fee_type.name }}</strong><br>
-                                    <small>Queue: {{ request.queue_number }} | ₱{{ request.amount|floatformat:2 }}</small>
+                                    <small>Request ID: {{ request.request_id|truncatechars:8 }} | ₱{{ request.amount|floatformat:2 }}</small>
                                 </div>
                                 <span class="badge bg-warning">{{ request.status }}</span>
                             </div>

@@ -50,7 +50,7 @@
                             {% if log.payment %}
                                 <a href="{% url 'payment_detail' log.payment.pk %}">Payment OR#{{ log.payment.or_number }}</a>
                             {% elif log.payment_request %}
-                                <a href="{% url 'paymentrequest_detail' log.payment_request.pk %}">Request {{ log.payment_request.queue_number }}</a>
+                                <a href="{% url 'paymentrequest_detail' log.payment_request.pk %}">Request {{ log.payment_request.request_id|truncatechars:8 }}</a>
                             {% else %}
                                 <span class="text-muted">-</span>
                             {% endif %}
